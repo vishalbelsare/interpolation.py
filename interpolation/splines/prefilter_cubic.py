@@ -1,13 +1,12 @@
 import numpy as np
 from numba import jit, njit
-from numba import generated_jit
 from numba.extending import overload
 
 
-from distutils.version import LooseVersion
+from packaging.version import parse
 from numba import __version__
 
-if LooseVersion(__version__) >= "0.43":
+if parse(__version__) >= parse("0.43"):
     overload_options = {"strict": False}
 else:
     overload_options = {}
@@ -15,10 +14,10 @@ else:
 # used by njitted routines (frozen)
 basis = (1.0 / 6.0, 2.0 / 3.0, 1.0 / 6.0, 0.0)
 
+
 #
 @njit
 def solve_deriv_interp_1d(bands, coefs):
-
     M = coefs.shape[0] - 2
 
     # Solve interpolating equations
@@ -64,7 +63,6 @@ def solve_deriv_interp_1d(bands, coefs):
 
 @njit
 def find_coefs_1d(δ, data, coefs, bands):
-
     M = bands.shape[0] - 2
 
     # Setup boundary conditions
@@ -94,13 +92,11 @@ def _filter_cubic():
 # non allocating version
 @overload(_filter_cubic, **overload_options)
 def __filter_cubic(grid, D, C):
-
     d = len(grid.types)
 
     if D.ndim > d:
 
         def ___filter_cubic(grid, D, C):
-
             n_x = C.shape[-1]
             for i_x in range(n_x):
                 _filter_cubic(grid, D[..., i_x], C[..., i_x])
@@ -110,7 +106,6 @@ def __filter_cubic(grid, D, C):
     if d == 1:
 
         def ___filter_cubic(grid, D, C):
-
             dinv_0 = (grid[0][1] - grid[0][0]) / grid[0][2]
 
             Mx = D.shape[0]
@@ -126,7 +121,6 @@ def __filter_cubic(grid, D, C):
     if d == 2:
 
         def ___filter_cubic(grid, D, C):
-
             dinv_0 = (grid[0][1] - grid[0][0]) / grid[0][2]
             dinv_1 = (grid[1][1] - grid[1][0]) / grid[1][2]
 
@@ -151,7 +145,6 @@ def __filter_cubic(grid, D, C):
     if d == 3:
 
         def ___filter_cubic(grid, D, C):
-
             dinv_0 = (grid[0][1] - grid[0][0]) / grid[0][2]
             dinv_1 = (grid[1][1] - grid[1][0]) / grid[1][2]
             dinv_2 = (grid[2][1] - grid[2][0]) / grid[2][2]
@@ -186,7 +179,6 @@ def __filter_cubic(grid, D, C):
     if d == 4:
 
         def ___filter_cubic(grid, D, C):
-
             dinv_0 = (grid[0][1] - grid[0][0]) / grid[0][2]
             dinv_1 = (grid[1][1] - grid[1][0]) / grid[1][2]
             dinv_2 = (grid[2][1] - grid[2][0]) / grid[2][2]
@@ -242,7 +234,6 @@ def __filter_cubic(grid, D, C):
 # allocating version
 @overload(_filter_cubic)
 def __filter_cubic(grid, D):
-
     d = len(grid.types)
     if D.ndim == d:
         if D.ndim == 1:
@@ -337,9 +328,7 @@ none = numba.typeof(None)
 
 @numba.extending.overload(_prefilter)
 def _ov_prefilter(grid, V, k, out=None):
-
     if isinstance(k, numba.types.Literal):
-
         if k.literal_value == 1:
 
             def _impl_prefilter(grid, V, k, out=None):

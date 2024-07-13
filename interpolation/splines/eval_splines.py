@@ -1,5 +1,4 @@
 import numpy as np
-from numba import jit, generated_jit
 from numpy import zeros
 from numpy import floor
 
@@ -19,7 +18,6 @@ from numpy import floor
 from interpolation.splines.codegen import get_code_spline, source_to_function
 from numba.types import UniTuple, float64, Array
 from interpolation.splines.codegen import source_to_function
-from numba import generated_jit
 
 
 from ..compat import Tuple, UniTuple
@@ -50,9 +48,12 @@ t_array_2d = [
 ### eval spline (main function)
 
 
-# @generated_jit(inline='always', nopython=True) # doens't work
-@generated_jit(nopython=True)
 def allocate_output(G, C, P, O):
+    pass
+
+
+@overload(allocate_output)
+def ol_allocate_output(G, C, P, O):
     if C.ndim == len(G) + 1:
         # vector valued
         if P.ndim == 2:
@@ -94,26 +95,9 @@ def _eval_spline():
     pass
 
 
-@overload(_eval_spline)
-def __eval_spline(
-    grid, C, points, out=None, order=1, diff="None", extrap_mode="linear"
-):
-
-    if not (
-        isinstance(order, numba.types.Literal)
-        and isinstance(diff, numba.types.Literal)
-        and isinstance(extrap_mode, numba.types.Literal)
-    ):
-
-        def ugly_workaround(
-            grid, C, points, out=None, order=1, diff="None", extrap_mode="linear"
-        ):
-            return (literally(order), literally(diff), literally(extrap_mode))
-
-        # def __eval_spline(grid, C, points, out=None, order=1, diff="None", extrap_mode='linear'):
-        #     return __eval_spline(grid, C, points, out=out, order=literally(order), diff=literally(diff), extrap_mode=literally(extrap_mode))
-
-    kk = (order).literal_value
+@overload(_eval_spline, prefer_literal=True)
+def __eval_spline(grid, C, points, out=None, k=1, diff="None", extrap_mode="linear"):
+    kk = (k).literal_value
     diffs = (diff).literal_value
     extrap_ = (extrap_mode).literal_value
     d = len(grid)
@@ -155,12 +139,12 @@ def __eval_spline(
 
 
 @njit
-def eval_spline(grid, C, points, out=None, order=1, diff="None", extrap_mode="linear"):
+def eval_spline(grid, C, points, out=None, k=1, diff="None", extrap_mode="linear"):
     """Do I get a docstring ?"""
     dd = numba.literally(diff)
-    k = numba.literally(order)
+    k = numba.literally(k)
     extrap_ = numba.literally(extrap_mode)
-    return _eval_spline(grid, C, points, out=out, order=k, diff=dd, extrap_mode=extrap_)
+    return _eval_spline(grid, C, points, out=out, k=k, diff=dd, extrap_mode=extrap_)
 
 
 ###
@@ -172,6 +156,8 @@ def _eval_linear():
     pass
 
 
+# TODO: now that constant propagation in numba works well enough we can remove the option_types
+
 from .option_types import options, t_CONSTANT, t_LINEAR, t_NEAREST
 
 
@@ -179,13 +165,12 @@ from .option_types import options, t_CONSTANT, t_LINEAR, t_NEAREST
 def __eval_linear(grid, C, points):
     # print("We allocate with default extrapolation.")
     return lambda grid, C, points: eval_spline(
-        grid, C, points, order=1, extrap_mode="linear", diff="None"
+        grid, C, points, k=1, extrap_mode="linear", diff="None"
     )
 
 
 @overload(_eval_linear, **overload_options)
 def __eval_linear(grid, C, points, extrap_mode):
-
     # print(f"We are going to extrapolate in {extrap_mode} mode.")
     if extrap_mode == t_NEAREST:
         extrap_ = "nearest"
@@ -197,13 +182,12 @@ def __eval_linear(grid, C, points, extrap_mode):
         return None
 
     return lambda grid, C, points, extrap_mode: eval_spline(
-        grid, C, points, order=1, diff="None", extrap_mode=extrap_
+        grid, C, points, k=1, diff="None", extrap_mode=extrap_
     )
 
 
 @overload(_eval_linear, **overload_options)
 def __eval_linear(grid, C, points, out, extrap_mode):
-
     # print(f"We are going to do inplace, with {extrap_mode} extrapolation")
     if extrap_mode == t_NEAREST:
         extrap_ = "nearest"
@@ -214,15 +198,14 @@ def __eval_linear(grid, C, points, out, extrap_mode):
     else:
         return None
     return lambda grid, C, points, out, extrap_mode: eval_spline(
-        grid, C, points, out=out, order=1, diff="None", extrap_mode=extrap_
+        grid, C, points, out=out, k=1, diff="None", extrap_mode=extrap_
     )
 
 
 @overload(_eval_linear, **overload_options)
 def __eval_linear(grid, C, points, out):
-
     return lambda grid, C, points, out: eval_spline(
-        grid, C, points, out=out, order=1, diff="None", extrap_mode="linear"
+        grid, C, points, out=out, k=1, diff="None", extrap_mode="linear"
     )
 
 
@@ -249,7 +232,7 @@ def __eval_cubic(grid, C, points):
         grid,
         C,
         points,
-        order=literally(3),
+        k=literally(3),
         extrap_mode=literally("linear"),
         diff=literally("None"),
     )
@@ -257,31 +240,29 @@ def __eval_cubic(grid, C, points):
 
 @overload(_eval_cubic, **overload_options)
 def __eval_cubic(grid, C, points, extrap_mode):
-
     # print(f"We are going to extrapolate in {extrap_mode} mode.")
     if extrap_mode == t_NEAREST:
         extrap_ = literally("nearest")
     elif extrap_mode == t_CONSTANT:
         extrap_ = literally("constant")
-    elif extrap_mode == t_cubic:
-        extrap_ = literally("cubic")
+    elif extrap_mode == t_LINEAR:
+        extrap_ = literally("linear")
     else:
         return None
 
     return lambda grid, C, points, extrap_mode: eval_spline(
-        grid, C, points, order=literally(3), diff=literally("None"), extrap_mode=extrap_
+        grid, C, points, k=literally(3), diff=literally("None"), extrap_mode=extrap_
     )
 
 
 @overload(_eval_cubic, **overload_options)
 def __eval_cubic(grid, C, points, out, extrap_mode):
-
     if extrap_mode == t_NEAREST:
         extrap_ = literally("nearest")
     elif extrap_mode == t_CONSTANT:
         extrap_ = literally("constant")
-    elif extrap_mode == t_cubic:
-        extrap_ = literally("cubic")
+    elif extrap_mode == t_LINEAR:
+        extrap_ = literally("linear")
     else:
         return None
     return lambda grid, C, points, out, extrap_mode: eval_spline(
@@ -289,7 +270,7 @@ def __eval_cubic(grid, C, points, out, extrap_mode):
         C,
         points,
         out=out,
-        order=literally(3),
+        k=literally(3),
         diff=literally("None"),
         extrap_mode=extrap_,
     )
@@ -300,13 +281,12 @@ from numba import literally
 
 @overload(_eval_cubic, **overload_options)
 def __eval_cubic(grid, C, points, out):
-
     return lambda grid, C, points, out: eval_spline(
         grid,
         C,
         points,
         out=out,
-        order=literally(3),
+        k=literally(3),
         diff=literally("None"),
         extrap_mode=literally("linear"),
     )

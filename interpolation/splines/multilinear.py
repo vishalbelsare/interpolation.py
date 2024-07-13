@@ -65,7 +65,7 @@ class LinearSpline:
     def __init__(self, smin, smax, orders, values=None, dtype=numpy.float64):
         self.smin = numpy.array(smin, dtype=dtype)
         self.smax = numpy.array(smax, dtype=dtype)
-        self.orders = numpy.array(orders, dtype=numpy.int)
+        self.orders = numpy.array(orders, dtype=numpy.int64)
         self.d = len(orders)
         self.dtype = dtype
         if values is not None:
@@ -82,7 +82,6 @@ class LinearSpline:
         self.values = numpy.ascontiguousarray(values, dtype=self.dtype)
 
     def interpolate(self, s):
-
         from .eval_splines import eval_linear
 
         s = numpy.ascontiguousarray(s, dtype=self.dtype)
@@ -93,7 +92,6 @@ class LinearSpline:
         return a
 
     def __call__(self, s):
-
         if s.ndim == 1:
             res = self.__call__(numpy.atleast_2d(s))
             return res[0]
@@ -147,7 +145,7 @@ class LinearSplines:
     def __init__(self, smin, smax, orders, mvalues=None, dtype=numpy.float64):
         self.smin = numpy.array(smin, dtype=dtype)
         self.smax = numpy.array(smax, dtype=dtype)
-        self.orders = numpy.array(orders, dtype=numpy.int)
+        self.orders = numpy.array(orders, dtype=numpy.int64)
         self.d = len(orders)
         self.dtype = dtype
         if mvalues is not None:
@@ -160,14 +158,12 @@ class LinearSplines:
         return self.__grid__
 
     def set_values(self, mvalues):
-
         n_x = mvalues.shape[-1]
         new_orders = list(self.orders) + [n_x]
         mvalues = mvalues.reshape(new_orders)
         self.mvalues = numpy.ascontiguousarray(mvalues, dtype=self.dtype)
 
     def interpolate(self, s):
-
         from .multilinear_numba import eval_linear
 
         grid = tuple(
@@ -178,7 +174,6 @@ class LinearSplines:
         return a
 
     def __call__(self, s):
-
         if s.ndim == 1:
             res = self.__call__(numpy.atleast_2d(s))
             return res.ravel()

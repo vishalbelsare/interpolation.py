@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "interpolation"
-version = "2.2.1"
+version = "2.2.7"
 readme = "README.md"
 description = "Interpolation in Python"
 authors = [
@@ -14,19 +14,18 @@ maintainers = [
 license = "BSD-2-Clause"
 
 [tool.poetry.dependencies]
-python = ">=3.7, <3.10"
-numba = ">=0.47"
-numpy = "^1.18.1"
-tempita = "^0.5.2"
-scipy = "^1.4.1"
+python = ">=3.9"
+numba = ">=0.59.1"
+scipy = "^1.10"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
-mkdocs = "^1.1"
-pymdown-extensions = "^7.1"
-python-markdown-math = "^0.6"
-mypy = "^0.782"
+pytest = "^7.3.0"
+black = "^23.3.0"
+python-markdown-math = "^0.8"
+pymdown-extensions = "^10.7"
+mkdocs = "^1.5.3"
+
 
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry>=1.2"]
 build-backend = "poetry.masonry.api"

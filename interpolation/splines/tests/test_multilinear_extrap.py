@@ -1,5 +1,4 @@
 def test_multilinear_extrap():
-
     import numpy as np
 
     N = 100000
@@ -14,7 +13,7 @@ def test_multilinear_extrap():
 
     s = mlinspace(a, b, n)
 
-    f = lambda x: (x ** 2).sum(axis=1)
+    f = lambda x: (x**2).sum(axis=1)
 
     x = f(s)
     v = x.reshape(n)

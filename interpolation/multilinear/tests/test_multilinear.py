@@ -1,24 +1,29 @@
 from numpy import linspace, array
 from numpy.random import random
 from numba import typeof
+from numba import njit
 
 import numpy as np
-from interpolation.multilinear.fungen import get_index
+from ..fungen import get_index
+
+
+@njit
+def get_index_njit(gc, x):
+    return get_index(gc, x)
 
 
 def test_barycentric_indexes():
-
     # irregular grid
     gg = np.array([0.0, 1.0])
-    assert get_index(gg, -0.1) == (0, -0.1)
-    assert get_index(gg, 0.5) == (0, 0.5)
-    assert get_index(gg, 1.1) == (0, 1.1)
+    assert get_index_njit(gg, -0.1) == (0, -0.1)
+    assert get_index_njit(gg, 0.5) == (0, 0.5)
+    assert get_index_njit(gg, 1.1) == (0, 1.1)
 
     # regular grid
     gg = (0.0, 1.0, 2)
-    assert get_index(gg, -0.1) == (0, -0.1)
-    assert get_index(gg, 0.5) == (0, 0.5)
-    assert get_index(gg, 1.1) == (0, 1.1)
+    assert get_index_njit(gg, -0.1) == (0, -0.1)
+    assert get_index_njit(gg, 0.5) == (0, 0.5)
+    assert get_index_njit(gg, 1.1) == (0, 1.1)
 
 
 # 2d-vecev-scalar
@@ -94,7 +99,6 @@ from interpolation.multilinear.mlinterp import mlinterp, interp
 
 
 def test_mlinterp():
-
     # simple multilinear interpolation api
 
     import numpy as np
@@ -111,18 +115,20 @@ def test_mlinterp():
     pp = np.random.random((2000, 2))
 
     res0 = mlinterp((x1, x2), y, pp)
+    assert res0 is not None
+
     res0 = mlinterp((x1, x2), y, (0.1, 0.2))
+    assert res0 is not None
 
 
 def test_multilinear():
-
     # flat flexible api
 
     for t in tests:
-
         tt = [typeof(e) for e in t]
-        print(tt)
         rr = interp(*t)
+
+        assert rr is not None
 
         try:
             print(f"{tt}: {rr.shape}")

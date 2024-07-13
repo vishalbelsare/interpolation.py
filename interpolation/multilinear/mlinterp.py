@@ -29,6 +29,7 @@ from .fungen import (
 )
 
 from numba import njit
+from numba.extending import overload
 from typing import Tuple
 
 from ..compat import UniTuple, Tuple, Float, Integer, Array
@@ -36,16 +37,19 @@ from ..compat import UniTuple, Tuple, Float, Integer, Array
 Scalar = (Float, Integer)
 
 import numpy as np
-from numba import generated_jit
 
 # logic of multilinear interpolation
 
 
-@generated_jit
-def mlinterp(grid, c, u):
+def _mlinterp(grid, c, u):
+    pass
+
+
+@overload(_mlinterp)
+def ol_mlinterp(grid, c, u):
     if isinstance(u, UniTuple):
 
-        def mlininterp(grid: Tuple, c: Array, u: Tuple) -> float:
+        def mlininterp(grid, c, u):
             # get indices and barycentric coordinates
             tmp = fmap(get_index, grid, u)
             indices, barycenters = funzip(tmp)
@@ -55,7 +59,7 @@ def mlinterp(grid, c, u):
 
     elif isinstance(u, Array) and u.ndim == 2:
 
-        def mlininterp(grid: Tuple, c: Array, u: Array) -> float:
+        def mlininterp(grid, c, u):
             N = u.shape[0]
             res = np.zeros(N)
             for n in range(N):
@@ -72,6 +76,11 @@ def mlinterp(grid, c, u):
     return mlininterp
 
 
+@njit
+def mlinterp(grid, c, u):
+    return _mlinterp(grid, c, u)
+
+
 ### The rest of this file constrcts function `interp`
 
 from collections import namedtuple
@@ -80,7 +89,6 @@ itt = namedtuple("InterpType", ["d", "values", "eval"])
 
 
 def detect_types(args):
-
     dims = [e.ndim if isinstance(e, Array) else -1 for e in args]
 
     md = max(dims)
@@ -127,7 +135,6 @@ def detect_types(args):
 
 
 def make_mlinterp(it, funname):
-
     if it.values == "vector":
         return None
 
@@ -215,15 +222,13 @@ def {funname}(*args):
         return source
 
 
-from numba import generated_jit
+def _interp(*args):
+    pass
 
 
-@generated_jit(nopython=True)
-def interp(*args):
-
-    aa = args[0].types
-
-    it = detect_types(aa)
+@overload(_interp)
+def ol_interp(*args):
+    it = detect_types(args)
     if it.d == 1 and it.eval == "point":
         it = itt(it.d, it.values, "cartesian")
     source = make_mlinterp(it, "__mlinterp")
@@ -233,3 +238,8 @@ def interp(*args):
     code = compile(tree, "<string>", "exec")
     eval(code, globals())
     return __mlinterp
+
+
+@njit
+def interp(*args):
+    return _interp(*args)
